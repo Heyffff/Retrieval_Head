@@ -248,14 +248,19 @@ class LLMNeedleHaystackTester:
 
     def find_needle_idx(self, needle):
         needle_ids = self.enc(needle, add_special_tokens=False)["input_ids"]
-        print( self.enc.decode(needle_ids, skip_special_tokens=False))
+        # print( self.enc.decode(needle_ids, skip_special_tokens=False))    # hyf_edit
         span_len = len(needle_ids)
         for i in range(len(self.prompt_ids)):            
             token_span = self.prompt_ids[i : i + span_len]
             span_ids = set(token_span.tolist())
             overlap = float(len(span_ids.intersection(set(needle_ids)))) / len(set(needle_ids))
-            if(overlap > 0.9):
+            if overlap > 0.9:
+                print("*** Real Needles ***")    # hyf_edit
+                print(self.enc.decode(needle_ids, skip_special_tokens=False))    # hyf_edit
+                print("*** Searched Real Needles ***")    # hyf_edit
+                print(self.enc.decode(self.prompt_ids[i:i + span_len], skip_special_tokens=False))    # hyf_edit
                 return i, i + span_len
+        print("!!! Failed Searching Real Needles !!!")    # hyf_edit
         return -1, -1
 
     def evaluate_and_log(self, context_length, depth_percent):
@@ -417,10 +422,11 @@ class LLMNeedleHaystackTester:
             tokens_new_context = tokens_context[:insertion_point]
 
             # We want to make sure that we place our needle at a sentence break so we first see what token a '.' is
-            if(self.model_provider in ["LLaMA", "LongLLaMA"]): period_tokens = [29889, 869]
-            elif(self.model_provider == "Mistral"): period_tokens = [842, 28723]
-            elif(self.model_provider == "GLM"): period_tokens = [918, 30930]
-            else: period_tokens = self.encode_text_to_tokens('.')
+            # if(self.model_provider in ["LLaMA", "LongLLaMA"]): period_tokens = [29889, 869]
+            # elif(self.model_provider == "Mistral"): period_tokens = [842, 28723]
+            # elif(self.model_provider == "GLM"): period_tokens = [918, 30930]
+            # else:
+            period_tokens = self.encode_text_to_tokens('.') # hyf_edit
             
             # Then we iteration backwards until we find the first period
             while tokens_new_context and tokens_new_context[-1] not in period_tokens:
@@ -502,6 +508,8 @@ class LLMNeedleHaystackTester:
             if self.print_ongoing_status:
                 self.print_start_test_summary()
             self.run_test(args)
+        if not os.path.exists("head_score"):    # hyf_edit
+            os.makedirs('head_score')   # hyf_edit
         if os.path.exists(f"head_score/{self.model_version}.json"):
             with open(f"./head_score/{self.model_version}.json", "r") as file:
                 head_counter = json.loads(file.readline())
